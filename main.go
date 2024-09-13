@@ -51,6 +51,7 @@ func getDetailedCourseInfo(courseCode string) string {
 	body, err := io.ReadAll(response.Body)
 	check(err)
 	sb := string(body)
+	println(response.StatusCode)
 
 	return sb
 }
@@ -60,7 +61,7 @@ type CourseCode struct {
 	CourseCode string
 }
 
-func readCourseCode() []CourseCode {
+func readCourseCodes() []CourseCode {
 	jsonFile, err := os.Open("./data/course_list.json")
 	check(err)
 
@@ -89,21 +90,33 @@ func readCourseCode() []CourseCode {
 	return codes
 }
 
+func getCourseCodeFromFileName(fileName string) string {
+	return strings.Replace(strings.Replace(fileName, "course_", "", 1), ".html", "", 1)
+}
+
 func getReadCourseCodes() []string {
 	entries, err := os.ReadDir("./data/courses")
 	check(err)
 
 	var codes []string
 	for _, entry := range entries {
-		code := strings.Replace(strings.Replace(entry.Name(), "course_", "", 1), ".html", "", 1)
+		code := getCourseCodeFromFileName(entry.Name())
 		codes = append(codes, code)
 	}
 	return codes
 }
 
+func loadCourseHtmls(codes []CourseCode) {
+	for _, code := range codes {
+		courseHtml := getDetailedCourseInfo(code.ApiCode)
+		writeToFile("./data/courses/course_"+code.CourseCode+".html", courseHtml)
+		time.Sleep(2 * time.Second)
+	}
+}
+
 func loadAllCourseHtmls() {
 	loadEnv()
-	codes := readCourseCode()
+	codes := readCourseCodes()
 	readCodes := getReadCourseCodes()
 	println(readCodes)
 
@@ -119,21 +132,44 @@ func loadAllCourseHtmls() {
 	}
 }
 
+func getCourseApiCodeByCodes(courseCodes []string) []CourseCode {
+	allCodes := readCourseCodes()
+	apiCodes := []CourseCode{}
+
+	for _, code := range allCodes {
+		if slices.Contains(courseCodes, code.CourseCode) {
+			apiCodes = append(apiCodes, code)
+		}
+	}
+
+	return apiCodes
+}
+
 func main() {
+	loadEnv()
+
 	entries, err := os.ReadDir("./data/courses")
 	check(err)
 
 	courseInfos := []*CourseInfo{}
+
+	emptyCourses := []string{}
 	for _, entry := range entries {
 		path := "./data/courses/" + entry.Name()
 		reader, err := os.Open(path)
 		check(err)
 
 		parsedInfo := parseCourseInfo(reader)
-		println(parsedInfo.Address)
-		courseInfos = append(courseInfos, parsedInfo)
+		if parsedInfo.Code == "" {
+			courseCode := getCourseCodeFromFileName(entry.Name())
+			println(courseCode)
+			emptyCourses = append(emptyCourses, courseCode)
+		} else {
+			courseInfos = append(courseInfos, parsedInfo)
+		}
 	}
 
+	writeToFile("./data/empty_courses.json", strings.Join(emptyCourses, ","))
 	jsonBytes, err := json.Marshal(courseInfos)
 	check(err)
 
