@@ -23,7 +23,7 @@ func loadEnv() {
 }
 
 func writeToFile(fileName string, data string) {
-	f, err := os.Create("./data/courses/" + fileName)
+	f, err := os.Create(fileName)
 	check(err)
 	defer f.Close()
 
@@ -114,7 +114,28 @@ func loadAllCourseHtmls() {
 		}
 
 		courseHtml := getDetailedCourseInfo(code.ApiCode)
-		writeToFile("course_"+code.CourseCode+".html", courseHtml)
+		writeToFile("./data/courses/course_"+code.CourseCode+".html", courseHtml)
 		time.Sleep(2 * time.Second)
 	}
+}
+
+func main() {
+	entries, err := os.ReadDir("./data/courses")
+	check(err)
+
+	courseInfos := []*CourseInfo{}
+	for _, entry := range entries {
+		path := "./data/courses/" + entry.Name()
+		reader, err := os.Open(path)
+		check(err)
+
+		parsedInfo := parseCourseInfo(reader)
+		println(parsedInfo.Address)
+		courseInfos = append(courseInfos, parsedInfo)
+	}
+
+	jsonBytes, err := json.Marshal(courseInfos)
+	check(err)
+
+	writeToFile("./data/complete_course_info.json", string(jsonBytes[:]))
 }

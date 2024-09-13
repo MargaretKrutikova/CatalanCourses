@@ -1,8 +1,7 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -42,44 +41,53 @@ func readFile(fileName string) string {
 	return string(data)
 }
 
-func parseCourseInfo(htmlLines string) *CourseInfo {
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlLines))
+func containsMultiple(text string, substrings []string) bool {
+	for _, sub := range substrings {
+		if strings.Contains(text, sub) {
+			return true
+		}
+	}
+	return false
+}
+
+func parseCourseInfo(htmlReader io.Reader) *CourseInfo {
+	doc, err := goquery.NewDocumentFromReader(htmlReader)
 	check(err)
 
 	courseInfo := new(CourseInfo)
 	doc.Find("div.container").Find("div.row").Children().Each(func(i int, s *goquery.Selection) {
 		s.Find("dl.dl-horizontal").Children().Each(func(i int, s *goquery.Selection) {
-			if s.Text() == "Course code" {
+			if s.Text() == "Course code" || s.Text() == "Codi del curs" {
 				courseInfo.Code = getText(s.Next())
 			}
-			if strings.Contains(s.Text(), "Days and times") {
+			if containsMultiple(s.Text(), []string{"Days and times", "Dies i horari"}) {
 				courseInfo.Schedule = getText(s.Next())
 			}
-			if strings.Contains(s.Text(), "Start and end of the course") {
+			if containsMultiple(s.Text(), []string{"Start and end of the course", "Inici i final del curs"}) {
 				dates := strings.Split(getText(s.Next()), " - ")
 				courseInfo.StartDate = dates[0]
 				courseInfo.EndDate = dates[1]
 			}
-			if strings.Contains(s.Text(), "Places") {
+			if containsMultiple(s.Text(), []string{"Places"}) {
 				courseInfo.PlacesAvailable = getText(s.Next())
 			}
-			if strings.Contains(s.Text(), "Registration deadline") {
+			if containsMultiple(s.Text(), []string{"Registration deadline", "Inscripció general"}) {
 				courseInfo.RegistrationDeadline = getText(s.Next())
 			}
-			if strings.Contains(s.Text(), "Preferential registration") {
+			if containsMultiple(s.Text(), []string{"Preferential registration", "Inscripció preferent"}) {
 				courseInfo.IsPreferentialRegistration = getText(s.Next())
 			}
 		})
 
 		s.Find("div.panel").Children().Each(func(i int, child *goquery.Selection) {
-			if strings.Contains(child.Find("h2").Text(), "Place availability") {
+			if containsMultiple(child.Find("h2").Text(), []string{"Place availability", "Disponibilitat de places"}) {
 				courseInfo.PlacesLeft = getText(child.Next().Children().Find("h3"))
 			}
 
-			if strings.Contains(child.Find("h2").Text(), "Classroom and Center data") {
+			if containsMultiple(child.Find("h2").Text(), []string{"Classroom and Center data", "Dades de l'aula i del Centre"}) {
 
 				child.Parent().Find("table").Find("tr").Each(func(i int, tr *goquery.Selection) {
-					if strings.Contains(tr.Find("th").Text(), "Address") {
+					if containsMultiple(tr.Find("th").Text(), []string{"Address", "Adreça"}) {
 						courseInfo.Address = getText(tr.Find("td"))
 					}
 					if strings.Contains(tr.Find("th").Text(), "Metro") {
@@ -96,13 +104,4 @@ func parseCourseInfo(htmlLines string) *CourseInfo {
 	})
 
 	return courseInfo
-}
-
-func parse() {
-	info := parseCourseInfo(readFile("data/course_example.html"))
-
-	jsonBytes, err := json.Marshal(info)
-	check(err)
-
-	fmt.Println(string(jsonBytes[:]))
 }
