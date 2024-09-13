@@ -98,7 +98,7 @@ func parseCourseInfo(htmlLines string) *CourseInfo {
 	return courseInfo
 }
 
-func main() {
+func parse() {
 	info := parseCourseInfo(readFile("data/course_example.html"))
 
 	jsonBytes, err := json.Marshal(info)
