@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"os"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -22,32 +21,10 @@ type CourseInfo struct {
 	Email                      string `json:"email"`
 }
 
-func check(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
 func getText(s *goquery.Selection) string {
 	text := s.Text()
 	trimmedText := strings.Trim(text, " \n")
 	return trimmedText
-}
-
-func readFile(fileName string) string {
-	data, err := os.ReadFile(fileName)
-	check(err)
-
-	return string(data)
-}
-
-func containsMultiple(text string, substrings []string) bool {
-	for _, sub := range substrings {
-		if strings.Contains(text, sub) {
-			return true
-		}
-	}
-	return false
 }
 
 func parseCourseInfo(htmlReader io.Reader) *CourseInfo {
@@ -91,9 +68,7 @@ func parseCourseInfo(htmlReader io.Reader) *CourseInfo {
 						courseInfo.Address = getText(tr.Find("td"))
 					}
 					if strings.Contains(tr.Find("th").Text(), "Metro") {
-						tr.Find("td").Children().Each(func(i int, metro *goquery.Selection) {
-							courseInfo.Metros = getText(metro)
-						})
+						courseInfo.Metros = getText(tr.Find("td"))
 					}
 					if tr.Find("th").Text() == "EmailCentre" {
 						courseInfo.Email = getText(tr.Find("td"))

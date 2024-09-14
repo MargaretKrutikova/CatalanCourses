@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -13,24 +12,16 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Load env variables
+type CourseCode struct {
+	ApiCode    string
+	CourseCode string
+}
 
 const findCourseUrl = "https://inscripcions.cpnl.cat/preregistration/index/"
 
 func loadEnv() {
 	err := godotenv.Load()
 	check(err)
-}
-
-func writeToFile(fileName string, data string) {
-	f, err := os.Create(fileName)
-	check(err)
-	defer f.Close()
-
-	w := bufio.NewWriter(f)
-	w.WriteString(data)
-
-	w.Flush()
 }
 
 func getDetailedCourseInfo(courseCode string) string {
@@ -42,46 +33,34 @@ func getDetailedCourseInfo(courseCode string) string {
 
 	response, err := http.DefaultClient.Do(resp)
 	if err != nil {
-		print(err)
-		print("Error for course: " + courseCode)
+		println(err)
+		println("Error for course: " + courseCode)
 		return ""
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(response.Body)
+
 	check(err)
-	sb := string(body)
-	println(response.StatusCode)
 
-	return sb
-}
-
-type CourseCode struct {
-	ApiCode    string
-	CourseCode string
+	return string(body)
 }
 
 func readCourseCodes() []CourseCode {
-	jsonFile, err := os.Open("./data/course_list.json")
+	byteValue, err := os.ReadFile("./data/course_list.json")
 	check(err)
 
-	defer jsonFile.Close()
-
-	byteValue, _ := io.ReadAll(jsonFile)
-
-	var result map[string]interface{}
+	var result map[string]any
 	if err := json.Unmarshal(byteValue, &result); err != nil {
 		panic(err)
 	}
 
-	data := result["data"].([]interface{})
+	data := result["data"].([]map[string]any)
 
 	var codes []CourseCode
 	for _, element := range data {
-		parsed := element.(map[string]interface{})
-
-		if code, ok := parsed["codiPlain"].(string); ok {
-			if apiCode, ok := parsed["codi"].(string); ok {
+		if code, ok := element["codiPlain"].(string); ok {
+			if apiCode, ok := element["codi"].(string); ok {
 				codes = append(codes, CourseCode{ApiCode: apiCode, CourseCode: code})
 			}
 		}
@@ -106,19 +85,15 @@ func getReadCourseCodes() []string {
 	return codes
 }
 
-func loadCourseHtmls(codes []CourseCode) {
-	for _, code := range codes {
-		courseHtml := getDetailedCourseInfo(code.ApiCode)
-		writeToFile("./data/courses/course_"+code.CourseCode+".html", courseHtml)
-		time.Sleep(2 * time.Second)
-	}
+func saveDetailedCourseInfo(code CourseCode) {
+	courseHtml := getDetailedCourseInfo(code.ApiCode)
+
+	writeToFile("./data/courses/course_"+code.CourseCode+".html", courseHtml)
 }
 
 func loadAllCourseHtmls() {
-	loadEnv()
 	codes := readCourseCodes()
 	readCodes := getReadCourseCodes()
-	println(readCodes)
 
 	for _, code := range codes {
 		if slices.Contains(readCodes, code.CourseCode) {
@@ -126,8 +101,7 @@ func loadAllCourseHtmls() {
 			continue
 		}
 
-		courseHtml := getDetailedCourseInfo(code.ApiCode)
-		writeToFile("./data/courses/course_"+code.CourseCode+".html", courseHtml)
+		saveDetailedCourseInfo(code)
 		time.Sleep(2 * time.Second)
 	}
 }
