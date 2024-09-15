@@ -24,6 +24,7 @@ export const InfoWindowContent = ({ course }: InfoWindowContentProps) => {
         Places total {course.placesLliures}, places left {detailedInfo.placesLeft}
       </div>
       <div>{detailedInfo.address}</div>
+      <div>{detailedInfo.metros}</div>
       <div>Deadline: {detailedInfo.registrationDeadline}</div>
     </>
   );
