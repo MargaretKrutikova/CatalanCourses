@@ -4,9 +4,9 @@ import { Map, MapCameraChangedEvent } from "@vis.gl/react-google-maps";
 import courseData from "../data/course_list.json";
 
 const courses = courseData.data.filter((c) => parseInt(c.horaInici.split(":")[0]) > 16);
-const home = {
-  lat: parseFloat(process.env.REACT_APP_HOME_LAT || ""),
-  lng: parseFloat(process.env.REACT_APP_HOME_LNG || ""),
+const center = {
+  lat: 41.397585,
+  lng: 2.16967,
 };
 
 const courseMarkers = courses.map((course) => ({
@@ -28,7 +28,7 @@ export const CourseMap: React.FunctionComponent<{}> = () => {
     <Map
       defaultZoom={14}
       mapId={"6a73725fb27f7adc"}
-      defaultCenter={home}
+      defaultCenter={center}
       onCameraChanged={(ev: MapCameraChangedEvent) =>
         console.log("camera changed:", ev.detail.center, "zoom:", ev.detail.zoom)
       }
